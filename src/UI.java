@@ -1,15 +1,45 @@
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class UI {
-    private final Host host;
+
+    public void setBot(boolean bot) {
+        isBot = bot;
+    }
+
+    private boolean isBot;
+
+    public void setX() {
+        frame.setTitle("X");
+        this.isTurn = host.getXsTurn();
+    }
+
+    public void setO() {
+        frame.setTitle("O");
+        this.isTurn = host.getOsTurn();
+    }
+
+    private AtomicBoolean isTurn;
+
+
+
+    private Host host;
     private final ArrayList<Status> buttons = new ArrayList<>();
     private final JDialog frame = new JDialog();
+    private final JInternalFrame internalFrame = new JInternalFrame();
+
+    public UI linkTo(String seed) {
+        frame.setTitle(seed);
+        this.host = new Linker().linkTo(seed);
+        return this;
+    }
 
     public UI(String seed) {
-        Linker linker = new Linker();
-        this.host = linker.linkTo(seed);
+
+        linkTo(seed);
 
         frame.setVisible(true);
         frame.setLayout(new GridLayout(3, 3));
@@ -58,10 +88,24 @@ public class UI {
 
                     }
                     if(host.doCheck()) {
+                        if(host.getWinner() == 1) {
+                            frame.setTitle("X Wins");
+                        } else
+                            frame.setTitle("O Wins");
+
+
                         host.resetBoard();
                         for (Status status : buttons) {
                             status.setEnabled(true);
                         }
+                    }
+
+                    for (Status status : buttons) {
+                        status.setEnabled(isTurn.get());
+                    }
+
+                    if(isTurn.get() && isBot) {
+                        chooseRandomButton();
                     }
                 }
             }
@@ -69,14 +113,24 @@ public class UI {
         updateUI.start();
     }
 
+    private void chooseRandomButton() {
+        //chooseRandomButton
+        int localSelection = ThreadLocalRandom.current().nextInt(0, 9);
+        System.err.printf("\023896m chose random %d\023[0m",localSelection);
+        if(host.check(localSelection) == 0){
+            buttons.get(localSelection).doClick();
+        }
+        else chooseRandomButton();
+    }
+
 
     private void Listener(Status button) {
         button.addActionListener(e -> {
-            if (host.isXsTurn()) {
+            if (host.isXsTurn().get()) {
                 button.setX();
                 host.setPos(button.getPosition());
             }
-            else if (host.isOsTurn()) {
+            else if (host.isOsTurn().get()) {
                 button.setO();
                 host.setPos(button.getPosition());
             }

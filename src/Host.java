@@ -1,8 +1,9 @@
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Host {
 
-    private static Linker linker = new Linker();
+    private static final Linker linker = new Linker();
 
     public String getSeed() {
         return seed;
@@ -14,21 +15,26 @@ public class Host {
 
     private String seed;
     private final ArrayList<Integer> board;
-    private int winner;
-    private boolean xsTurn = true;
-    private boolean osTurn = false;
 
-    public Host() {
-        this.seed = null;
-        linker.addHost(this);
-
-        board = new ArrayList<>();
-        for (int i = 0; i < 9; i++) {
-            board.add(i, 0);
-        }
+    public int getWinner() {
+        return winner;
     }
 
+    private int winner;
+
+    public AtomicBoolean getXsTurn() {
+        return this.xsTurn;
+    }
+    public AtomicBoolean getOsTurn() {
+        return this.osTurn;
+    }
+    private final AtomicBoolean xsTurn = new AtomicBoolean(true);
+    private final AtomicBoolean osTurn = new AtomicBoolean(false);
+
+    @SuppressWarnings("BusyWait")
     public Host(String seed) {
+
+
         this.seed = seed;
         linker.addHost(this);
 
@@ -36,25 +42,49 @@ public class Host {
         for (int i = 0; i < 9; i++) {
             board.add(i, 0);
         }
+
+        Thread checker = new Thread(() -> {
+            while(true) {
+                try {
+                    Thread.sleep(1,0);
+                } catch (InterruptedException ignored) {
+                }
+                // both sides lose
+                boolean allTurnsTaken = true;
+                for (Integer num : board) {
+                    if (num == 0) {
+                        allTurnsTaken = false;
+                        break;
+                    }
+                }
+                if(allTurnsTaken) {
+                    resetBoard();
+                }
+            }
+        });
+        checker.start();
+
     }
 
-    public boolean isXsTurn() {
+    public AtomicBoolean isXsTurn() {
+        System.err.println("\033[31m Xs Turn\033[0m");
         return xsTurn;
     }
 
-    public boolean isOsTurn() {
+    public AtomicBoolean isOsTurn() {
+        System.err.println("\033[96m Os Turn\033[0m");
         return osTurn;
     }
 
     public void setPos(int z) {
         if(board.get(z) == 0) {
-            if (xsTurn) {
-                xsTurn = false;
-                osTurn = true;
+            if (xsTurn.get()) {
+                xsTurn.set(false);
+                osTurn.set(true);
                 board.set(z, 1);
-            } else if (osTurn) {
-                osTurn = false;
-                xsTurn = true;
+            } else if (osTurn.get()) {
+                osTurn.set(false);
+                xsTurn.set(true);
                 board.set(z, 2);
             }
         }
@@ -66,18 +96,6 @@ public class Host {
 
 
     public boolean doCheck() {
-
-        // both sides lose
-        boolean allTurnsTaken = true;
-        for (int i = 0; i < 9; i++) {
-            if (board.get(i) != 0) {
-                allTurnsTaken = false;
-                break;
-            }
-        }
-        if(allTurnsTaken) {
-            resetBoard();
-        }
 
         for (int i = 0; i < 3; i++) {
             // ROWS

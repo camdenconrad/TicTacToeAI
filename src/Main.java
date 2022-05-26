@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.Scanner;
 
 public class Main {
 
@@ -12,7 +14,13 @@ public class Main {
         frame.setSize((screenSize.height * 2) - 400, screenSize.height - 100);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-        new UI("seed");
-        new UI("seed");
+        ArrayList<UI> games = new ArrayList<UI>();
+
+        games.add(new UI("seed"));
+        games.get(0).setO();
+        games.add(new UI("seed"));
+        games.get(1).setBot(true);
+        games.get(1).setX();
+
     }
 }
