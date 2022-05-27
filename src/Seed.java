@@ -1,5 +1,4 @@
-public class Seed
-{
+public class Seed {
     private final String seed;
 
     private int seats = 0;
@@ -16,13 +15,12 @@ public class Seed
         if (seats < 2) {
             seed.increaseSeat();
             return true;
-        }
-        else
+        } else
             throw new SeatOverflowException();
 
     }
 
-    public void increaseSeat(){
+    public void increaseSeat() {
         this.seats++;
     }
 }

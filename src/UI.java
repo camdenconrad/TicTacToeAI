@@ -1,47 +1,27 @@
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class UI {
 
-    public void setBot(boolean bot) {
-        isBot = bot;
-    }
-
-    private boolean isBot;
-
-    public void setX() {
-        frame.setTitle("X");
-        this.isTurn = host.getXsTurn();
-    }
-
-    public void setO() {
-        frame.setTitle("O");
-        this.isTurn = host.getOsTurn();
-    }
-
-    private AtomicBoolean isTurn;
-
-
-
-    private Host host;
     private final ArrayList<Status> buttons = new ArrayList<>();
     private final JDialog frame = new JDialog();
-    private final JInternalFrame internalFrame = new JInternalFrame();
-
-    public UI linkTo(String seed) {
-        frame.setTitle(seed);
-        this.host = new Linker().linkTo(seed);
-        return this;
-    }
+    public Thread updateUI;
+    private AtomicInteger totalMoves = new AtomicInteger(0);
+    private int botSelection;
+    private boolean isBot;
+    private boolean isSmartBot;
+    private AtomicBoolean isTurn;
+    private Host host;
 
     public UI(String seed) {
 
         linkTo(seed);
 
-        frame.setVisible(true);
         frame.setLayout(new GridLayout(3, 3));
 
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -66,61 +46,129 @@ public class UI {
 
     }
 
+    public AtomicInteger getTotalMoves() {
+        return totalMoves;
+    }
+
+    public int getBotSelection() {
+        return botSelection;
+    }
+
+    public void setVisible() {
+        frame.setVisible(true);
+    }
+
+    public void setBot(boolean bot) {
+        isBot = bot;
+        frame.setTitle("Simulation");
+    }
+
+    public void setSmartBot(boolean smartBot) {
+        isSmartBot = smartBot;
+    }
+
+    public void setX() {
+        frame.setTitle("X");
+        this.isTurn = host.getXsTurn();
+    }
+
+    public void setO() {
+        frame.setTitle("O");
+        this.isTurn = host.getOsTurn();
+    }
+
+    public void linkTo(String seed) {
+        this.host = Linker.linkTo(seed);
+    }
+
+    @SuppressWarnings("BusyWait")
     private void updateUI() {
-        Thread updateUI = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while(true) {
-                    try {
-                        Thread.sleep(1,0);
-                    } catch (InterruptedException ignored) {
+        updateUI = new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(0, 1);
+                } catch (InterruptedException ignored) {
+                }
+                for (Status button : buttons) {
+                    if (host.check(button.getPosition()) == 1) {
+                        button.setBackground(new Color(105, 170, 205));
                     }
-                    for (Status button : buttons) {
-                        if(host.check(button.getPosition()) == 1){
-                            button.setBackground(new Color(25, 170, 205));
-                        }
-                        if(host.check(button.getPosition()) == 2){
-                            button.setBackground(new Color(25, 170, 105));
-                        }
-                        if(host.check(button.getPosition()) == 0){
-                            button.setBackground(new Color(255, 255, 255));
-                        }
-
+                    if (host.check(button.getPosition()) == 2) {
+                        button.setBackground(new Color(25, 120, 105));
                     }
-                    if(host.doCheck()) {
-                        if(host.getWinner() == 1) {
-                            frame.setTitle("X Wins");
-                        } else
-                            frame.setTitle("O Wins");
+                    if (host.check(button.getPosition()) == 0) {
+                        button.setBackground(new Color(255, 255, 255));
+                    }
 
+                }
+                if (host.doCheck()) {
+                    if (host.getWinner() != 1) {
+                        frame.setTitle("O Wins");
+//                        if ((host instanceof SimHost) && (totalMoves.get() <= 1)) {
+//                            Simulation.doDefense();
+//                            break;
+//                        }
+                    } else if (host.getWinner() == 1) {
+                        frame.setTitle("X Wins");
+                        if (host instanceof SimHost) {
+                            Simulation.update();
+                            break;
+                        }
 
+                    } else
                         host.resetBoard();
-                        for (Status status : buttons) {
-                            status.setEnabled(true);
-                        }
+                    if(totalMoves.get() > 9) {
+                        host.resetBoard();
+                        totalMoves.set(0);
                     }
 
+                    host.resetBoard();
                     for (Status status : buttons) {
-                        status.setEnabled(isTurn.get());
+                        status.setEnabled(true);
                     }
+                }
 
-                    if(isTurn.get() && isBot) {
-                        chooseRandomButton();
-                    }
+                for (Status status : buttons) {
+                    status.setEnabled(isTurn.get());
+                }
+
+                if (isTurn.get() && isSmartBot) {
+                    chooseSimulatedButton();
+                }
+
+                if (isTurn.get() && isBot) {
+                    chooseRandomButton();
                 }
             }
         });
         updateUI.start();
     }
 
+    private void chooseSimulatedButton() {
+        int simulationResult = new Simulation().run(host);
+        if(simulationResult != -1) {
+            botSelection = simulationResult;
+            buttons.get(simulationResult).doClick();
+        } else chooseRandomButton();
+    }
+
     private void chooseRandomButton() {
-        //chooseRandomButton
-        int localSelection = ThreadLocalRandom.current().nextInt(0, 9);
-        System.err.printf("\023896m chose random %d\023[0m",localSelection);
-        if(host.check(localSelection) == 0){
-            buttons.get(localSelection).doClick();
+
+        int localSelection;
+        localSelection = ThreadLocalRandom.current().nextInt(0, 9);
+
+        while(host.check(localSelection) != 0) {
+            localSelection = new Random().nextInt(9);
         }
-        else chooseRandomButton();
+
+        //System.err.printf("\033[10m chose random %d\033[0m\n", localSelection);
+        //System.out.println(host.check(localSelection));
+
+        botSelection = localSelection;
+        buttons.get(localSelection).doClick();
+        totalMoves.addAndGet(1);
+
+
     }
 
 
@@ -129,8 +177,7 @@ public class UI {
             if (host.isXsTurn().get()) {
                 button.setX();
                 host.setPos(button.getPosition());
-            }
-            else if (host.isOsTurn().get()) {
+            } else if (host.isOsTurn().get()) {
                 button.setO();
                 host.setPos(button.getPosition());
             }

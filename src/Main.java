@@ -1,7 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 public class Main {
 
@@ -16,11 +15,15 @@ public class Main {
 
         ArrayList<UI> games = new ArrayList<UI>();
 
+        //new Simulation();
+
         games.add(new UI("seed"));
-        games.get(0).setO();
+        games.get(0).setX();
+        //games.get(0).setBot(true);
+        games.get(0).setVisible();
         games.add(new UI("seed"));
-        games.get(1).setBot(true);
-        games.get(1).setX();
+        games.get(1).setSmartBot(true);
+        games.get(1).setO();
 
     }
 }

@@ -3,40 +3,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Host {
 
-    private static final Linker linker = new Linker();
-
-    public String getSeed() {
-        return seed;
-    }
-
-    public void setSeed(String seed) {
-        this.seed = seed;
-    }
-
-    private String seed;
-    private final ArrayList<Integer> board;
-
-    public int getWinner() {
-        return winner;
-    }
-
-    private int winner;
-
-    public AtomicBoolean getXsTurn() {
-        return this.xsTurn;
-    }
-    public AtomicBoolean getOsTurn() {
-        return this.osTurn;
-    }
     private final AtomicBoolean xsTurn = new AtomicBoolean(true);
     private final AtomicBoolean osTurn = new AtomicBoolean(false);
+    ArrayList<Integer> board;
+    private String seed;
+    private int winner = 0;
+    private Thread checker;
 
     @SuppressWarnings("BusyWait")
     public Host(String seed) {
 
 
         this.seed = seed;
-        linker.addHost(this);
+        Linker.addHost(this);
 
         board = new ArrayList<>();
         for (int i = 0; i < 9; i++) {
@@ -44,9 +23,9 @@ public class Host {
         }
 
         Thread checker = new Thread(() -> {
-            while(true) {
+            while (true) {
                 try {
-                    Thread.sleep(1,0);
+                    Thread.sleep(1, 0);
                 } catch (InterruptedException ignored) {
                 }
                 // both sides lose
@@ -57,7 +36,8 @@ public class Host {
                         break;
                     }
                 }
-                if(allTurnsTaken) {
+                if (allTurnsTaken) {
+                    winner = 0;
                     resetBoard();
                 }
             }
@@ -66,18 +46,42 @@ public class Host {
 
     }
 
+    public String getSeed() {
+        return seed;
+    }
+
+    public void setSeed(String seed) {
+        this.seed = seed;
+    }
+
+    public ArrayList<Integer> getBoard() {
+        return board;
+    }
+
+    public int getWinner() {
+        return winner;
+    }
+
+    public AtomicBoolean getXsTurn() {
+        return this.xsTurn;
+    }
+
+    public AtomicBoolean getOsTurn() {
+        return this.osTurn;
+    }
+
     public AtomicBoolean isXsTurn() {
-        System.err.println("\033[31m Xs Turn\033[0m");
+        //System.err.println("\033[31m Xs Turn\033[0m");
         return xsTurn;
     }
 
     public AtomicBoolean isOsTurn() {
-        System.err.println("\033[96m Os Turn\033[0m");
+        //System.err.println("\033[96m Os Turn\033[0m");
         return osTurn;
     }
 
     public void setPos(int z) {
-        if(board.get(z) == 0) {
+        if (board.get(z) == 0) {
             if (xsTurn.get()) {
                 xsTurn.set(false);
                 osTurn.set(true);
@@ -88,6 +92,10 @@ public class Host {
                 board.set(z, 2);
             }
         }
+    }
+
+    public void setPos(int z, int set) {
+        board.set(z, set);
     }
 
     public int check(int pos) {
@@ -130,12 +138,13 @@ public class Host {
     }
 
     public void print() {
-        System.out.println("[" + board.get(0) + "]" + "[" + board.get(1) + "]" + "[" + board.get(2) + "]");
-        System.out.println("[" + board.get(3) + "]" + "[" + board.get(4) + "]" + "[" + board.get(5) + "]");
-        System.out.println("[" + board.get(6)+ "]" + "[" + board.get(7) + "]" + "[" + board.get(8)+ "]\n");
+        //System.out.println("[" + board.get(0) + "]" + "[" + board.get(1) + "]" + "[" + board.get(2) + "]");
+        //System.out.println("[" + board.get(3) + "]" + "[" + board.get(4) + "]" + "[" + board.get(5) + "]");
+        //System.out.println("[" + board.get(6) + "]" + "[" + board.get(7) + "]" + "[" + board.get(8) + "]\n");
     }
 
     public void resetBoard() {
+        //System.err.println("\033[31m Board was reset.\033[0m");
         for (int i = 0; i < 9; i++) {
             board.set(i, 0);
         }
