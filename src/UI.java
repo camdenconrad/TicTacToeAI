@@ -10,9 +10,10 @@ public class UI {
 
     private final ArrayList<Status> buttons = new ArrayList<>();
     private final JDialog frame = new JDialog();
+    private final AtomicInteger totalMoves = new AtomicInteger(0);
     public Thread updateUI;
-    private AtomicInteger totalMoves = new AtomicInteger(0);
     private int botSelection;
+    private int latestSelection;
     private boolean isBot;
     private boolean isSmartBot;
     private AtomicBoolean isTurn;
@@ -46,6 +47,10 @@ public class UI {
 
     }
 
+    public UI getOpponent() {
+        return host.findOpponent(this);
+    }
+
     public AtomicInteger getTotalMoves() {
         return totalMoves;
     }
@@ -58,13 +63,13 @@ public class UI {
         frame.setVisible(true);
     }
 
-    public void setBot(boolean bot) {
-        isBot = bot;
+    public void setBot() {
+        isBot = true;
         frame.setTitle("Simulation");
     }
 
-    public void setSmartBot(boolean smartBot) {
-        isSmartBot = smartBot;
+    public void setSmartBot() {
+        isSmartBot = true;
     }
 
     public void setX() {
@@ -78,7 +83,7 @@ public class UI {
     }
 
     public void linkTo(String seed) {
-        this.host = Linker.linkTo(seed);
+        this.host = Linker.linkTo(seed, this);
     }
 
     @SuppressWarnings("BusyWait")
@@ -104,10 +109,10 @@ public class UI {
                 if (host.doCheck()) {
                     if (host.getWinner() != 1) {
                         frame.setTitle("O Wins");
-//                        if ((host instanceof SimHost) && (totalMoves.get() <= 1)) {
-//                            Simulation.doDefense();
-//                            break;
-//                        }
+                        if ((host instanceof SimHost) && (getOpponent().totalMoves.get() == 1)) {
+                            Simulation.doDefense();
+                            break;
+                        }
                     } else if (host.getWinner() == 1) {
                         frame.setTitle("X Wins");
                         if (host instanceof SimHost) {
@@ -117,7 +122,7 @@ public class UI {
 
                     } else
                         host.resetBoard();
-                    if(totalMoves.get() > 9) {
+                    if (totalMoves.get() > 8) {
                         host.resetBoard();
                         totalMoves.set(0);
                     }
@@ -144,10 +149,17 @@ public class UI {
         updateUI.start();
     }
 
+    public int getLatestSelection() {
+        return latestSelection;
+    }
+
     private void chooseSimulatedButton() {
         int simulationResult = new Simulation().run(host);
-        if(simulationResult != -1) {
-            botSelection = simulationResult;
+        if (simulationResult != -1) {
+            if (totalMoves.get() == 0) {
+                botSelection = simulationResult;
+            }
+            latestSelection = simulationResult;
             buttons.get(simulationResult).doClick();
         } else chooseRandomButton();
     }
@@ -157,14 +169,16 @@ public class UI {
         int localSelection;
         localSelection = ThreadLocalRandom.current().nextInt(0, 9);
 
-        while(host.check(localSelection) != 0) {
+        while (host.check(localSelection) != 0) {
             localSelection = new Random().nextInt(9);
         }
 
         //System.err.printf("\033[10m chose random %d\033[0m\n", localSelection);
         //System.out.println(host.check(localSelection));
 
+
         botSelection = localSelection;
+        latestSelection = localSelection;
         buttons.get(localSelection).doClick();
         totalMoves.addAndGet(1);
 
@@ -183,5 +197,9 @@ public class UI {
             }
             host.print();
         });
+    }
+
+    public void setTitle(String tic_tac_toe) {
+        frame.setTitle(tic_tac_toe);
     }
 }

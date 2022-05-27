@@ -3,12 +3,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Host {
 
+    protected final ArrayList<UI> players = new ArrayList<>();
     private final AtomicBoolean xsTurn = new AtomicBoolean(true);
     private final AtomicBoolean osTurn = new AtomicBoolean(false);
+    private final String seed;
     ArrayList<Integer> board;
-    private String seed;
     private int winner = 0;
-    private Thread checker;
 
     @SuppressWarnings("BusyWait")
     public Host(String seed) {
@@ -46,12 +46,21 @@ public class Host {
 
     }
 
-    public String getSeed() {
-        return seed;
+    public UI findOpponent(UI ui) {
+        for (UI player : players) {
+            if (!ui.equals(player)) {
+                return player;
+            }
+        }
+        return null;
     }
 
-    public void setSeed(String seed) {
-        this.seed = seed;
+    public void addPlayer(UI player) {
+        players.add(player);
+    }
+
+    public String getSeed() {
+        return seed;
     }
 
     public ArrayList<Integer> getBoard() {
@@ -147,6 +156,9 @@ public class Host {
         //System.err.println("\033[31m Board was reset.\033[0m");
         for (int i = 0; i < 9; i++) {
             board.set(i, 0);
+        }
+        for (UI players : players) {
+            players.setTitle("Tic Tac Toe");
         }
     }
 

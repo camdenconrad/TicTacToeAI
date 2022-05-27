@@ -13,16 +13,16 @@ public class Main {
         frame.setSize((screenSize.height * 2) - 400, screenSize.height - 100);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-        ArrayList<UI> games = new ArrayList<UI>();
+        ArrayList<UI> games = new ArrayList<>();
 
         //new Simulation();
 
         games.add(new UI("seed"));
         games.get(0).setX();
-        //games.get(0).setBot(true);
+        //games.get(0).setSmartBot();
         games.get(0).setVisible();
         games.add(new UI("seed"));
-        games.get(1).setSmartBot(true);
+        games.get(1).setSmartBot();
         games.get(1).setO();
 
     }

@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Simulation {
 
     private static final AtomicBoolean keepRunning = new AtomicBoolean();
-
+    private static final AtomicBoolean doDefense = new AtomicBoolean();
 
     public Simulation() {
         keepRunning.set(false);
@@ -22,8 +22,6 @@ public class Simulation {
 
     }
 
-    private static final AtomicBoolean doDefense = new AtomicBoolean();
-
     public int run(Host board) {
         int lowestIndex = 0;
 
@@ -31,20 +29,20 @@ public class Simulation {
         for (int i = 0; i < 1; i++) {
             simulationResults.add(simulation(board));
         }
-        AtomicInteger lowestMoves = simulationResults.get(0).getMoves();
+        AtomicInteger lowestMoves = simulationResults.get(0).moves();
         for (int i = 0; i < 1; i++) {
-            System.out.println(simulationResults.get(i).getMoves());
-            if (simulationResults.get(i).getMoves().get() < lowestMoves.get() && simulationResults.get(i).getMoves().get() != 0) {
-                lowestMoves = simulationResults.get(i).getMoves();
+            System.out.println(simulationResults.get(i).moves());
+            if (simulationResults.get(i).moves().get() < lowestMoves.get() && simulationResults.get(i).moves().get() != 0) {
+                lowestMoves = simulationResults.get(i).moves();
                 lowestIndex = i;
             }
 
         }
         System.err.printf("\033[96m Lowest moves: %d\033[0m\n", lowestMoves.get());
         System.err.printf("\033[96m Chosen index: %d\033[0m\n", lowestIndex);
-        System.err.println("\033[96m Simulation Finished\033[0m");
+        System.err.println("\033[96m Simulation Finished\033[0m " + simulationResults.get(lowestIndex).index());
 
-        return simulationResults.get(lowestIndex).getIndex();
+        return simulationResults.get(lowestIndex).index();
     }
 
     private SimulationResults simulation(Host board) {
@@ -53,33 +51,43 @@ public class Simulation {
         String localSeed = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999));
         ArrayList<UI> games = new ArrayList<>();
 
-        new SimHost(localSeed, board);
+        SimHost simulationHost = new SimHost(localSeed, board);
 
         games.add(new UI(localSeed));
-        games.get(0).setBot(true);
+        games.get(0).setBot();
         games.get(0).setX();
         //games.get(0).setVisible();
         games.add(new UI(localSeed));
-        games.get(1).setBot(true);
+        games.get(1).setBot();
         games.get(1).setO();
 
-        while (true) {
-            if (keepRunning.get()) break;
-//            if(timesRan > 1000000000) {
-//                return new SimulationResults(-1, 1000000000);
-//            }
-//            timesRan++;
+        simulationHost.addPlayer(games.get(0));
+        simulationHost.addPlayer(games.get(1));
+
+
+        while (!keepRunning.get()) {
+            if (timesRan > 5000) {
+                return new SimulationResults(-1, new AtomicInteger(5000));
+            }
+            try {
+                Thread.sleep(1, 0);
+            } catch (InterruptedException ignored) {
+            }
+            timesRan++;
+            if (doDefense.get()) {
+                System.out.println("Did defensive play.");
+                doDefense.set(false);
+                int selection = games.get(0).getLatestSelection();
+                games.clear();
+
+                return new SimulationResults(selection, new AtomicInteger(-1));
+            }
         }
         neededMoves = games.get(0).getTotalMoves();
         //System.out.println(neededMoves);
         keepRunning.set(false);
 
-        int selection;
-        if (doDefense.get()) {
-            selection = games.get(1).getBotSelection();
-            System.out.println("Did defensive play.");
-        } else
-            selection = games.get(0).getBotSelection();
+        int selection = games.get(0).getBotSelection();
         doDefense.set(false);
 
         games.clear();
