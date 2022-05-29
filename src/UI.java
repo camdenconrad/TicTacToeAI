@@ -11,6 +11,7 @@ public class UI {
     private final ArrayList<Status> buttons = new ArrayList<>();
     private final JDialog frame = new JDialog();
     private final AtomicInteger totalMoves = new AtomicInteger(0);
+    private final Simulation simulation;
     public Thread updateUI;
     private int botSelection;
     private int latestSelection;
@@ -20,6 +21,8 @@ public class UI {
     private Host host;
 
     public UI(String seed) {
+
+        simulation = new Simulation();
 
         linkTo(seed);
 
@@ -33,10 +36,13 @@ public class UI {
             buttons.add(new Status(i));
         }
 
+        int j = 0;
         for (Status buttons : buttons) {
             frame.add(buttons);
             buttons.setBackground(new Color(255, 255, 255));
             buttons.setBorderPainted(false);
+            buttons.setText(String.valueOf(j));
+            j++;
         }
 
         for (Status buttons : buttons) {
@@ -87,7 +93,7 @@ public class UI {
     }
 
     @SuppressWarnings("BusyWait")
-    private void updateUI() {
+    synchronized private void updateUI() {
         updateUI = new Thread(() -> {
             while (true) {
                 try {
@@ -109,20 +115,18 @@ public class UI {
                 if (host.doCheck()) {
                     if (host.getWinner() != 1) {
                         frame.setTitle("O Wins");
-                        if ((host instanceof SimHost) && (getOpponent().totalMoves.get() == 1)) {
-                            Simulation.doDefense();
+                        if (host instanceof SimHost) {
                             break;
                         }
                     } else if (host.getWinner() == 1) {
                         frame.setTitle("X Wins");
-                        if (host instanceof SimHost) {
-                            Simulation.update();
+                        if ((host instanceof SimHost) && (getOpponent().totalMoves.get() == 1)) {
+                            System.out.println("Defense triggered");
+                            botSelection = getOpponent().getLatestSelection();
                             break;
                         }
 
-                    } else
-                        host.resetBoard();
-                    if (totalMoves.get() > 8) {
+                    } else {
                         host.resetBoard();
                         totalMoves.set(0);
                     }
@@ -138,7 +142,11 @@ public class UI {
                 }
 
                 if (isTurn.get() && isSmartBot) {
-                    chooseSimulatedButton();
+                    try {
+                        chooseSimulatedButton();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
 
                 if (isTurn.get() && isBot) {
@@ -153,15 +161,18 @@ public class UI {
         return latestSelection;
     }
 
-    private void chooseSimulatedButton() {
-        int simulationResult = new Simulation().run(host);
+    private void chooseSimulatedButton() throws InterruptedException {
+        int simulationResult = this.simulation.run(host);
+        //latestSelection = simulationResult;
+        System.out.println("Latest move selection: " + simulationResult);
         if (simulationResult != -1) {
             if (totalMoves.get() == 0) {
-                botSelection = simulationResult;
+                //System.out.println("0 move bot selection thingy flag");
+                //botSelection = simulationResult;
             }
-            latestSelection = simulationResult;
             buttons.get(simulationResult).doClick();
         } else chooseRandomButton();
+        System.out.println(botSelection);
     }
 
     private void chooseRandomButton() {
@@ -172,12 +183,16 @@ public class UI {
         while (host.check(localSelection) != 0) {
             localSelection = new Random().nextInt(9);
         }
+        System.out.println("Random selection: " + localSelection);
 
         //System.err.printf("\033[10m chose random %d\033[0m\n", localSelection);
         //System.out.println(host.check(localSelection));
 
 
-        botSelection = localSelection;
+        if (totalMoves.get() == 1) {
+            //System.out.println("0 move selection: " + localSelection);
+            botSelection = localSelection;
+        }
         latestSelection = localSelection;
         buttons.get(localSelection).doClick();
         totalMoves.addAndGet(1);
