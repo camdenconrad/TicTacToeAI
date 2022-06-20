@@ -20,6 +20,20 @@ public class UI {
     private AtomicBoolean isTurn;
     private Host host;
 
+    private boolean simRunning = true;
+
+    public boolean doesWin() {
+        return doesWin;
+    }
+
+    private boolean doesWin;
+
+    public boolean isDefensive() {
+        return isDefensive;
+    }
+
+    private boolean isDefensive;
+
     public UI(String seed) {
 
         simulation = new Simulation();
@@ -41,7 +55,7 @@ public class UI {
             frame.add(buttons);
             buttons.setBackground(new Color(255, 255, 255));
             buttons.setBorderPainted(false);
-            buttons.setText(String.valueOf(j));
+            //buttons.setText(String.valueOf(j));
             j++;
         }
 
@@ -102,10 +116,10 @@ public class UI {
                 }
                 for (Status button : buttons) {
                     if (host.check(button.getPosition()) == 1) {
-                        button.setBackground(new Color(105, 170, 205));
+                        button.setBackground(new Color(46, 25, 115));
                     }
                     if (host.check(button.getPosition()) == 2) {
-                        button.setBackground(new Color(25, 120, 105));
+                        button.setBackground(new Color(230, 115, 0));
                     }
                     if (host.check(button.getPosition()) == 0) {
                         button.setBackground(new Color(255, 255, 255));
@@ -116,15 +130,28 @@ public class UI {
                     if (host.getWinner() != 1) {
                         frame.setTitle("O Wins");
                         if (host instanceof SimHost) {
+                            if(this.totalMoves.get() == 1) {
+                                botSelection = this.getLatestSelection();
+                                this.doesWin = true;
+                                this.isDefensive = true;
+                            }
+
+                            simRunning = false;
+                            frame.dispose();
                             break;
                         }
-                    } else if (host.getWinner() == 1) {
+                    } else if (host.getWinner() <= 3) {
                         frame.setTitle("X Wins");
                         if ((host instanceof SimHost) && (getOpponent().totalMoves.get() == 1)) {
                             System.out.println("Defense triggered");
-                            botSelection = getOpponent().getLatestSelection();
+                            botSelection = getOpponent().getBotSelection();
+                            this.isDefensive = true;
+
+                            frame.dispose();
+                            simRunning = false;
                             break;
                         }
+                        //simulation.notifyAll();
 
                     } else {
                         host.resetBoard();
@@ -163,13 +190,7 @@ public class UI {
 
     private void chooseSimulatedButton() throws InterruptedException {
         int simulationResult = this.simulation.run(host);
-        //latestSelection = simulationResult;
-        System.out.println("Latest move selection: " + simulationResult);
         if (simulationResult != -1) {
-            if (totalMoves.get() == 0) {
-                //System.out.println("0 move bot selection thingy flag");
-                //botSelection = simulationResult;
-            }
             buttons.get(simulationResult).doClick();
         } else chooseRandomButton();
         System.out.println(botSelection);
@@ -183,7 +204,7 @@ public class UI {
         while (host.check(localSelection) != 0) {
             localSelection = new Random().nextInt(9);
         }
-        System.out.println("Random selection: " + localSelection);
+        //System.out.println("Random selection: " + localSelection);
 
         //System.err.printf("\033[10m chose random %d\033[0m\n", localSelection);
         //System.out.println(host.check(localSelection));
@@ -216,5 +237,13 @@ public class UI {
 
     public void setTitle(String tic_tac_toe) {
         frame.setTitle(tic_tac_toe);
+    }
+
+    public boolean simulationRunning() {
+        return simRunning;
+    }
+
+    public void setVisible(boolean b) {
+        this.frame.setVisible(b);
     }
 }

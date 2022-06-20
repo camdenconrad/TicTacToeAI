@@ -4,31 +4,38 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Simulation {
-    private final AtomicBoolean keepRunning = new AtomicBoolean();
-    private final AtomicBoolean doDefense = new AtomicBoolean();
+    private final AtomicBoolean doDefense = new AtomicBoolean(false);
+    private final AtomicBoolean doesWin = new AtomicBoolean(false);
+
+    private SimulationResults DEFENSIVE_RESULTS;
 
     public Simulation() {
-        keepRunning.set(false);
-    }
-
-    public void update() {
-        keepRunning.set(true);
-        //this.notify();
-    }
-
-    public void doDefense() {
-        keepRunning.set(true);
-        doDefense.set(true);
-
     }
 
     synchronized public int run(Host board) throws InterruptedException {
 
         ArrayList<SimulationResults> simulationResults = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 20; i++) {
             System.out.println("Running simulation " + (i + 1));
             simulationResults.add(simulation(board));
+            try {
+                if (simulationResults.get(i).equals(this.DEFENSIVE_RESULTS)) {
+                    if (this.doDefense.get()) {
+                        this.doDefense.set(false);
+                        this.doesWin.set(false);
+                        System.err.println("Defensive Result: " + DEFENSIVE_RESULTS.index());
+                        return DEFENSIVE_RESULTS.index();
+                    }
+                }
+            } catch (NullPointerException ignored){}
         }
+
+//        System.out.println(this.doDefense.get());
+//        if(this.doDefense.get()) {
+//            this.doDefense.set(false);
+//            this.doesWin.set(false);
+//            return DEFENSIVE_RESULTS.index();
+//        }
 
         ArrayList<Occurrences> uniqueMoves = new ArrayList<>();
         ArrayList<Integer> uniques = new ArrayList<>();
@@ -66,11 +73,11 @@ public class Simulation {
         System.out.println("HIGHEST OCCURRENCE: " + highestOccurrence);
         System.out.println(uniqueMoves.get(highestOccIndex));
 
+
         return uniqueMoves.get(highestOccIndex).result().index();
     }
 
     synchronized private SimulationResults simulation(Host board) throws InterruptedException {
-        int timesRan = 0;
         AtomicInteger neededMoves;
         String localSeed = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999));
         ArrayList<UI> games = new ArrayList<>();
@@ -84,42 +91,42 @@ public class Simulation {
         games.add(new UI(localSeed));
         games.get(1).setBot();
         games.get(1).setO();
-        //games.get(1).setVisible();
+        games.get(1).setVisible();
 
         simulationHost.addPlayer(games.get(0));
         simulationHost.addPlayer(games.get(1));
 
-        this.wait(3000);
-//        while (!keepRunning.get()) {
-//            System.out.println(keepRunning.get());
-//            if (timesRan > 50) {
-//                return new SimulationResults(-1, new AtomicInteger(5000));
-//            }
-//            try {
-//                Thread.sleep(100, 0);
-//            } catch (InterruptedException ignored) {
-//            }
-//            timesRan++;
-//            if (doDefense.get()) {
-//                System.out.println("Did defensive play.");
-//                doDefense.set(false);
-//                int selection = games.get(1).getLatestSelection();
-//                games.clear();
-//
-//                return new SimulationResults(selection, new AtomicInteger(-2));
-//            }
-//        }
+        this.wait(5000);
+
         neededMoves = games.get(1).getTotalMoves();
         //System.out.println(neededMoves);
-        keepRunning.set(false);
 
-        int selection = games.get(1).getLatestSelection();
+        int selection = games.get(1).getBotSelection();
         System.out.println("From Simulation: " + selection);
-        System.out.println(games.get(1));
-        doDefense.set(false);
 
+        if(games.get(1).doesWin()) {
+            selection = games.get(1).getLatestSelection();
+            this.DEFENSIVE_RESULTS = new SimulationResults(selection, neededMoves);
+            this.doDefense.set(true);
+            this.doesWin.set(true);
+            games.get(1).setVisible(false);
+            games.clear();
+            return this.DEFENSIVE_RESULTS;
+        }
+
+        if(games.get(1).isDefensive() && !doesWin.get()) {
+            selection = games.get(0).getLatestSelection();
+            this.DEFENSIVE_RESULTS = new SimulationResults(selection, neededMoves);
+            this.doDefense.set(true);
+            System.out.println(this.doDefense.get());
+            games.get(1).setVisible(false);
+            games.clear();
+            return this.DEFENSIVE_RESULTS;
+        }
         games.clear();
+
 
         return new SimulationResults(selection, neededMoves);
     }
+
 }
