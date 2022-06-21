@@ -25,7 +25,7 @@ public class Host {
         Thread checker = new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(1, 0);
+                    Thread.sleep(0, 2);
                 } catch (InterruptedException ignored) {
                 }
                 // both sides lose

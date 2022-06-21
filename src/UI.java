@@ -20,6 +20,8 @@ public class UI {
     private AtomicBoolean isTurn;
     private Host host;
 
+    private final AtomicBoolean isRunning = new AtomicBoolean(true);
+
     private boolean simRunning = true;
 
     public boolean doesWin() {
@@ -93,12 +95,12 @@ public class UI {
     }
 
     public void setX() {
-        frame.setTitle("X");
+        frame.setTitle("TicTacToe - Player X");
         this.isTurn = host.getXsTurn();
     }
 
     public void setO() {
-        frame.setTitle("O");
+        frame.setTitle("TicTacToe - Player O");
         this.isTurn = host.getOsTurn();
     }
 
@@ -136,7 +138,7 @@ public class UI {
                                 this.isDefensive = true;
                             }
 
-                            simRunning = false;
+                            this.isRunning.set(false);
                             frame.dispose();
                             break;
                         }
@@ -147,11 +149,15 @@ public class UI {
                             botSelection = getOpponent().getBotSelection();
                             this.isDefensive = true;
 
+                            this.isRunning.set(false);
                             frame.dispose();
-                            simRunning = false;
                             break;
                         }
-                        //simulation.notifyAll();
+
+                        this.isRunning.set(false);
+//                        synchronized(simulation) {
+//                            simulation.notifyAll();
+//                        }
 
                     } else {
                         host.resetBoard();
@@ -245,5 +251,9 @@ public class UI {
 
     public void setVisible(boolean b) {
         this.frame.setVisible(b);
+    }
+
+    public AtomicBoolean isRunning() {
+        return isRunning;
     }
 }

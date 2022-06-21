@@ -12,13 +12,13 @@ public class Simulation {
     public Simulation() {
     }
 
-    synchronized public int run(Host board) throws InterruptedException {
+    synchronized public int run(Host board){
 
         ArrayList<SimulationResults> simulationResults = new ArrayList<>();
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 200; i++) {
             System.out.println("Running simulation " + (i + 1));
             simulationResults.add(simulation(board));
-            try {
+            if(i > 1) {
                 if (simulationResults.get(i).equals(this.DEFENSIVE_RESULTS)) {
                     if (this.doDefense.get()) {
                         this.doDefense.set(false);
@@ -27,15 +27,8 @@ public class Simulation {
                         return DEFENSIVE_RESULTS.index();
                     }
                 }
-            } catch (NullPointerException ignored){}
+            }
         }
-
-//        System.out.println(this.doDefense.get());
-//        if(this.doDefense.get()) {
-//            this.doDefense.set(false);
-//            this.doesWin.set(false);
-//            return DEFENSIVE_RESULTS.index();
-//        }
 
         ArrayList<Occurrences> uniqueMoves = new ArrayList<>();
         ArrayList<Integer> uniques = new ArrayList<>();
@@ -77,7 +70,7 @@ public class Simulation {
         return uniqueMoves.get(highestOccIndex).result().index();
     }
 
-    synchronized private SimulationResults simulation(Host board) throws InterruptedException {
+    synchronized private SimulationResults simulation(Host board) {
         AtomicInteger neededMoves;
         String localSeed = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999));
         ArrayList<UI> games = new ArrayList<>();
@@ -91,12 +84,20 @@ public class Simulation {
         games.add(new UI(localSeed));
         games.get(1).setBot();
         games.get(1).setO();
-        games.get(1).setVisible();
+        //games.get(1).setVisible();
 
         simulationHost.addPlayer(games.get(0));
         simulationHost.addPlayer(games.get(1));
+        long time = System.currentTimeMillis();
 
-        this.wait(5000);
+        while(games.get(0).isRunning().get()) {
+
+            // timer, if simulation takes to long, break
+            if (System.currentTimeMillis() > (time + 4000)) {
+                break;
+            }
+
+        }
 
         neededMoves = games.get(1).getTotalMoves();
         //System.out.println(neededMoves);
@@ -123,6 +124,7 @@ public class Simulation {
             games.clear();
             return this.DEFENSIVE_RESULTS;
         }
+        games.get(1).setVisible(false);
         games.clear();
 
 
