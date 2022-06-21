@@ -15,9 +15,13 @@ public class Simulation {
     synchronized public int run(Host board){
 
         ArrayList<SimulationResults> simulationResults = new ArrayList<>();
-        for (int i = 0; i < 200; i++) {
+        for (int i = 0; i < 49; i++) {
             System.out.println("Running simulation " + (i + 1));
             simulationResults.add(simulation(board));
+            if(this.doesWin.get()) {
+                this.doesWin.set(false);
+                return DEFENSIVE_RESULTS.index();
+            }
             if(i > 1) {
                 if (simulationResults.get(i).equals(this.DEFENSIVE_RESULTS)) {
                     if (this.doDefense.get()) {

@@ -22,8 +22,6 @@ public class UI {
 
     private final AtomicBoolean isRunning = new AtomicBoolean(true);
 
-    private boolean simRunning = true;
-
     public boolean doesWin() {
         return doesWin;
     }
@@ -246,6 +244,7 @@ public class UI {
     }
 
     public boolean simulationRunning() {
+        boolean simRunning = true;
         return simRunning;
     }
 
