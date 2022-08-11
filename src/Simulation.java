@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -12,10 +13,10 @@ public class Simulation {
     public Simulation() {
     }
 
-    synchronized public int run(Host board){
+    synchronized public int run(Host board) throws IOException {
 
         ArrayList<SimulationResults> simulationResults = new ArrayList<>();
-        for (int i = 0; i < 49; i++) {
+        for (int i = 0; i < 9; i++) {
             System.out.println("Running simulation " + (i + 1));
             simulationResults.add(simulation(board));
             if(this.doesWin.get()) {
@@ -70,6 +71,8 @@ public class Simulation {
         System.out.println("HIGHEST OCCURRENCE: " + highestOccurrence);
         System.out.println(uniqueMoves.get(highestOccIndex));
 
+
+        new IO(board, uniqueMoves);
 
         return uniqueMoves.get(highestOccIndex).result().index();
     }

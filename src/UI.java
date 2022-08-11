@@ -1,5 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -34,6 +35,7 @@ public class UI {
 
     private boolean isDefensive;
 
+
     public UI(String seed) {
 
         simulation = new Simulation();
@@ -50,13 +52,11 @@ public class UI {
             buttons.add(new Status(i));
         }
 
-        int j = 0;
         for (Status buttons : buttons) {
             frame.add(buttons);
             buttons.setBackground(new Color(255, 255, 255));
-            buttons.setBorderPainted(false);
+            //buttons.setBorderPainted(false);
             //buttons.setText(String.valueOf(j));
-            j++;
         }
 
         for (Status buttons : buttons) {
@@ -116,10 +116,10 @@ public class UI {
                 }
                 for (Status button : buttons) {
                     if (host.check(button.getPosition()) == 1) {
-                        button.setBackground(new Color(46, 25, 115));
+                        button.setBackground(new Color(189, 147, 226));
                     }
                     if (host.check(button.getPosition()) == 2) {
-                        button.setBackground(new Color(230, 115, 0));
+                        button.setBackground(new Color(227, 147, 74));
                     }
                     if (host.check(button.getPosition()) == 0) {
                         button.setBackground(new Color(255, 255, 255));
@@ -177,6 +177,8 @@ public class UI {
                         chooseSimulatedButton();
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 }
 
@@ -192,12 +194,13 @@ public class UI {
         return latestSelection;
     }
 
-    private void chooseSimulatedButton() throws InterruptedException {
+    private void chooseSimulatedButton() throws InterruptedException, IOException {
         int simulationResult = this.simulation.run(host);
         if (simulationResult != -1) {
             buttons.get(simulationResult).doClick();
         } else chooseRandomButton();
         System.out.println(botSelection);
+        //new IO(host);
     }
 
     private void chooseRandomButton() {
@@ -241,11 +244,6 @@ public class UI {
 
     public void setTitle(String tic_tac_toe) {
         frame.setTitle(tic_tac_toe);
-    }
-
-    public boolean simulationRunning() {
-        boolean simRunning = true;
-        return simRunning;
     }
 
     public void setVisible(boolean b) {

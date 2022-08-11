@@ -162,5 +162,15 @@ public class Host {
         }
     }
 
+    public String printBoard() {
+        StringBuilder localString = new StringBuilder("");
+        for(int i = 0; i < 9; i++) {
+            localString.append(board.get(i));
+        }
+
+        return localString.toString();
+
+    }
+
 
 }
