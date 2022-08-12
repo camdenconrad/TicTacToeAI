@@ -72,9 +72,9 @@ public class Simulation {
         System.out.println(uniqueMoves.get(highestOccIndex));
 
 
-        new IO(board, uniqueMoves);
+        IO results = new IO(board, uniqueMoves);
 
-        return uniqueMoves.get(highestOccIndex).result().index();
+        return results.getHighestOccurrence();
     }
 
     synchronized private SimulationResults simulation(Host board) {

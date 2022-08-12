@@ -199,7 +199,7 @@ public class UI {
         if (simulationResult != -1) {
             buttons.get(simulationResult).doClick();
         } else chooseRandomButton();
-        System.out.println(botSelection);
+        //System.out.println(botSelection);
         //new IO(host);
     }
 

@@ -19,7 +19,7 @@ public class Main {
 
         games.add(new UI("seed"));
         games.get(0).setX();
-        //games.get(0).setSmartBot();
+        games.get(0).setSmartBot();
         games.get(0).setVisible();
         games.add(new UI("seed"));
         games.get(1).setSmartBot();
