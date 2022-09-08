@@ -10,31 +10,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class UI {
 
     private final ArrayList<Status> buttons = new ArrayList<>();
-    private final JDialog frame = new JDialog();
+    private final JPanel frame = new JPanel();
     private final AtomicInteger totalMoves = new AtomicInteger(0);
     private final Simulation simulation;
+    private final AtomicInteger botSelection = new AtomicInteger(-10); // debug initialize
+    private final AtomicInteger latestSelection = new AtomicInteger();
+    private final AtomicBoolean isRunning = new AtomicBoolean(true);
     public Thread updateUI;
-    private int botSelection;
-    private int latestSelection;
+    public int losses = 0;
     private boolean isBot;
     private boolean isSmartBot;
-    private AtomicBoolean isTurn;
+    private AtomicBoolean isTurn = new AtomicBoolean(true);
     private Host host;
-
-    private final AtomicBoolean isRunning = new AtomicBoolean(true);
-
-    public boolean doesWin() {
-        return doesWin;
-    }
-
     private boolean doesWin;
-
-    public boolean isDefensive() {
-        return isDefensive;
-    }
-
     private boolean isDefensive;
 
+    private int wins = 0;
+    private int ties = 0;
 
     public UI(String seed) {
 
@@ -67,6 +59,38 @@ public class UI {
 
     }
 
+    public Simulation getSimulation() {
+        return simulation;
+    }
+
+    public void incrementWins() {
+        wins++;
+    }
+
+    public void incrementTies() {
+        ties++;
+    }
+
+    public int getLosses() {
+        return losses;
+    }
+
+    public void incrementLosses() {
+        losses++;
+    }
+
+    public JPanel getFrame() {
+        return frame;
+    }
+
+    public boolean doesWin() {
+        return doesWin;
+    }
+
+    public boolean isDefensive() {
+        return isDefensive;
+    }
+
     public UI getOpponent() {
         return host.findOpponent(this);
     }
@@ -76,7 +100,7 @@ public class UI {
     }
 
     public int getBotSelection() {
-        return botSelection;
+        return botSelection.get();
     }
 
     public void setVisible() {
@@ -85,35 +109,37 @@ public class UI {
 
     public void setBot() {
         isBot = true;
-        frame.setTitle("Simulation");
+        //frame.setTitle("Simulation");
     }
 
     public void setSmartBot() {
+        isBot = false;
         isSmartBot = true;
     }
 
     public void setX() {
-        frame.setTitle("TicTacToe - Player X");
+        //frame.setTitle("TicTacToe - Player X");
         this.isTurn = host.getXsTurn();
     }
 
     public void setO() {
-        frame.setTitle("TicTacToe - Player O");
+        //frame.setTitle("TicTacToe - Player O");
         this.isTurn = host.getOsTurn();
     }
 
     public void linkTo(String seed) {
-        this.host = Linker.linkTo(seed, this);
+        this.host = Linker.linkTo(seed);
     }
 
     @SuppressWarnings("BusyWait")
-    synchronized private void updateUI() {
+    private void updateUI() {
         updateUI = new Thread(() -> {
             while (true) {
                 try {
                     Thread.sleep(0, 1);
                 } catch (InterruptedException ignored) {
                 }
+
                 for (Status button : buttons) {
                     if (host.check(button.getPosition()) == 1) {
                         button.setBackground(new Color(189, 147, 226));
@@ -126,43 +152,58 @@ public class UI {
                     }
 
                 }
+                while (true) {
+                    if (!host.getIsResetting()) break;
+
+                }
+
+
                 if (host.doCheck()) {
                     if (host.getWinner() != 1) {
-                        frame.setTitle("O Wins");
+                        this.incrementWins();
+                        //frame.setTitle("O Wins");
                         if (host instanceof SimHost) {
-                            if(this.totalMoves.get() == 1) {
-                                botSelection = this.getLatestSelection();
+                            if (this.totalMoves.get() == 1) {
                                 this.doesWin = true;
-                                this.isDefensive = true;
                             }
 
+                            botSelection.set(this.getLatestSelection());
                             this.isRunning.set(false);
-                            frame.dispose();
+
+                            //frame.dispose();
                             break;
                         }
                     } else if (host.getWinner() <= 3) {
-                        frame.setTitle("X Wins");
-                        if ((host instanceof SimHost) && (getOpponent().totalMoves.get() == 1)) {
-                            System.out.println("Defense triggered");
-                            botSelection = getOpponent().getBotSelection();
-                            this.isDefensive = true;
+                        this.incrementLosses();
+                        //frame.setTitle("X Wins");
+                        try {
+                            if ((host instanceof SimHost) && (getOpponent().totalMoves.get() == 1)) {
+                                this.isDefensive = true;
 
-                            this.isRunning.set(false);
-                            frame.dispose();
-                            break;
+                                while (true) {
+                                    if (!simulation.getIsRunning()) break;
+                                }
+                                botSelection.set(getOpponent().getBotSelection());
+
+                                this.isRunning.set(false);
+
+                                //frame.dispose();
+                                break;
+                            }
+                        } catch (NullPointerException ignored) {
+
                         }
 
+                        botSelection.set(this.getLatestSelection());
                         this.isRunning.set(false);
-//                        synchronized(simulation) {
-//                            simulation.notifyAll();
-//                        }
-
                     } else {
-                        host.resetBoard();
+                        this.incrementTies();
                         totalMoves.set(0);
                     }
 
                     host.resetBoard();
+                    //System.gc();
+
                     for (Status status : buttons) {
                         status.setEnabled(true);
                     }
@@ -172,32 +213,39 @@ public class UI {
                     status.setEnabled(isTurn.get());
                 }
 
+                if (isTurn.get() && isBot) {
+                    chooseRandomButton();
+                }
+
                 if (isTurn.get() && isSmartBot) {
                     try {
                         chooseSimulatedButton();
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    } catch (IOException e) {
+                    } catch (InterruptedException | IOException e) {
                         throw new RuntimeException(e);
                     }
                 }
 
-                if (isTurn.get() && isBot) {
-                    chooseRandomButton();
-                }
+                //botSelection.set(this.getLatestSelection());
+//                while(true) {
+//                    if (!isRunning.get()) break;
+//                }
+
             }
+            //System.out.println(this.getLatestSelection());
         });
         updateUI.start();
     }
 
     public int getLatestSelection() {
-        return latestSelection;
+        return latestSelection.get();
     }
 
     private void chooseSimulatedButton() throws InterruptedException, IOException {
+
         int simulationResult = this.simulation.run(host);
         if (simulationResult != -1) {
             buttons.get(simulationResult).doClick();
+            //frame.update(frame.getGraphics());
         } else chooseRandomButton();
         //System.out.println(botSelection);
         //new IO(host);
@@ -205,24 +253,24 @@ public class UI {
 
     private void chooseRandomButton() {
 
-        int localSelection;
-        localSelection = ThreadLocalRandom.current().nextInt(0, 9);
+        int localSelection = ThreadLocalRandom.current().nextInt(0, 9);
 
         while (host.check(localSelection) != 0) {
             localSelection = new Random().nextInt(9);
         }
-        //System.out.println("Random selection: " + localSelection);
+        // System.out.println("Random selection: " + localSelection);
 
-        //System.err.printf("\033[10m chose random %d\033[0m\n", localSelection);
-        //System.out.println(host.check(localSelection));
+        // System.err.printf("\033[10m chose random %d\033[0m\n", localSelection);
+        // System.out.println(host.check(localSelection));
 
 
-        if (totalMoves.get() == 1) {
+        if (totalMoves.get() == 0) {
             //System.out.println("0 move selection: " + localSelection);
-            botSelection = localSelection;
+            botSelection.set(localSelection);
         }
-        latestSelection = localSelection;
+        latestSelection.set(localSelection);
         buttons.get(localSelection).doClick();
+        //frame.update(frame.getGraphics());
         totalMoves.addAndGet(1);
 
 
@@ -238,12 +286,12 @@ public class UI {
                 button.setO();
                 host.setPos(button.getPosition());
             }
-            host.print();
+            //host.print();
         });
     }
 
     public void setTitle(String tic_tac_toe) {
-        frame.setTitle(tic_tac_toe);
+        //frame.setTitle(tic_tac_toe);
     }
 
     public void setVisible(boolean b) {
@@ -252,5 +300,13 @@ public class UI {
 
     public AtomicBoolean isRunning() {
         return isRunning;
+    }
+
+    public int getWins() {
+        return this.wins;
+    }
+
+    public int getTies() {
+        return this.ties;
     }
 }

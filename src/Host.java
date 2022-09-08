@@ -7,8 +7,12 @@ public class Host {
     private final AtomicBoolean xsTurn = new AtomicBoolean(true);
     private final AtomicBoolean osTurn = new AtomicBoolean(false);
     private final String seed;
+    private final ThreadLocal<Boolean> isResetting = ThreadLocal.withInitial(() -> false);
     ArrayList<Integer> board;
     private int winner = 0;
+    private int wins = 0;
+    private int ties = 0;
+    private int losses = 0;
 
     @SuppressWarnings("BusyWait")
     public Host(String seed) {
@@ -25,7 +29,7 @@ public class Host {
         Thread checker = new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(0, 2);
+                    Thread.sleep(0, 1);
                 } catch (InterruptedException ignored) {
                 }
                 // both sides lose
@@ -44,6 +48,18 @@ public class Host {
         });
         checker.start();
 
+    }
+
+    public int getWins() {
+        return wins;
+    }
+
+    public int getTies() {
+        return ties;
+    }
+
+    public int getLosses() {
+        return losses;
     }
 
     public UI findOpponent(UI ui) {
@@ -114,6 +130,7 @@ public class Host {
 
     public boolean doCheck() {
 
+
         for (int i = 0; i < 3; i++) {
             // ROWS
             if (areEqual(board.get((i * 3)), board.get(1 + (i * 3)), board.get(2 + (i * 3))))
@@ -153,18 +170,19 @@ public class Host {
     }
 
     public void resetBoard() {
+        this.updateScores();
+        this.isResetting.set(true);
+
         //System.err.println("\033[31m Board was reset.\033[0m");
         for (int i = 0; i < 9; i++) {
             board.set(i, 0);
         }
-        for (UI players : players) {
-            players.setTitle("Tic Tac Toe");
-        }
+        this.isResetting.set(false);
     }
 
     public String printBoard() {
-        StringBuilder localString = new StringBuilder("");
-        for(int i = 0; i < 9; i++) {
+        StringBuilder localString = new StringBuilder();
+        for (int i = 0; i < 9; i++) {
             localString.append(board.get(i));
         }
 
@@ -172,5 +190,36 @@ public class Host {
 
     }
 
+    public void clearPlayers() {
+        this.players.clear();
+    }
 
+    public void removePlayers(ArrayList<UI> players) {
+        for (UI player : players) {
+            this.players.remove(player);
+        }
+
+    }
+
+    public void printPlayers() {
+        for (UI players : players) {
+            System.out.println(players);
+        }
+    }
+
+    public void updateScores() {
+
+        if (winner == 2) {
+            this.losses++;
+        } else if (winner == 1) {
+            this.wins++;
+        } else {
+            this.ties++;
+        }
+    }
+
+
+    public boolean getIsResetting() {
+        return this.isResetting.get();
+    }
 }

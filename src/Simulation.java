@@ -5,34 +5,42 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Simulation {
-    private final AtomicBoolean doDefense = new AtomicBoolean(false);
     private final AtomicBoolean doesWin = new AtomicBoolean(false);
-
-    private SimulationResults DEFENSIVE_RESULTS;
+    private final AtomicInteger simsRun = new AtomicInteger();
+    ArrayList<UI> simGames = new ArrayList<>();
+    private ThreadLocal<Boolean> isRunning = ThreadLocal.withInitial(() -> false);
 
     public Simulation() {
+
     }
 
-    synchronized public int run(Host board) throws IOException {
+    public int getSimsRun() {
+        return simsRun.get();
+    }
+
+    public boolean getIsRunning() {
+        return isRunning.get();
+    }
+
+    public int run(Host board) throws IOException {
+
+        simsRun.set(0);
 
         ArrayList<SimulationResults> simulationResults = new ArrayList<>();
-        for (int i = 0; i < 9; i++) {
-            System.out.println("Running simulation " + (i + 1));
-            simulationResults.add(simulation(board));
-            if(this.doesWin.get()) {
-                this.doesWin.set(false);
-                return DEFENSIVE_RESULTS.index();
+        ArrayList<Thread> threads = new ArrayList<>();
+        for (int i = 0; i < Main.runs; i++) {
+            //System.out.println("Running simulation " + (i + 1));
+            threads.add(new Thread(() -> simulationResults.add(simulation(board))));
+            threads.get(threads.size() - 1).start();
+
+        }
+        while (threads.size() > 0) {
+            int localSize = threads.size();
+            threads.removeIf(local -> !local.isAlive());
+            if (threads.size() < localSize) {
+                simsRun.addAndGet(localSize - threads.size());
             }
-            if(i > 1) {
-                if (simulationResults.get(i).equals(this.DEFENSIVE_RESULTS)) {
-                    if (this.doDefense.get()) {
-                        this.doDefense.set(false);
-                        this.doesWin.set(false);
-                        System.err.println("Defensive Result: " + DEFENSIVE_RESULTS.index());
-                        return DEFENSIVE_RESULTS.index();
-                    }
-                }
-            }
+            //System.out.println(threads.size());
         }
 
         ArrayList<Occurrences> uniqueMoves = new ArrayList<>();
@@ -51,91 +59,113 @@ public class Simulation {
             }
         }
         for (Integer result : uniques) {
-            System.out.println(result);
+            //System.out.println(result);
         }
-        System.out.println("/////");
+        //System.out.println("/////");
 
         for (Occurrences occurrence : uniqueMoves) {
-            System.out.println(occurrence);
+            //System.out.println(occurrence);
         }
-
-        int highestOccurrence = 0;
-        int highestOccIndex = 0;
-        for (Occurrences occurrence : uniqueMoves) {
-            if (occurrence.getCount() > highestOccurrence) {
-                highestOccurrence = occurrence.getCount();
-                highestOccIndex = uniqueMoves.indexOf(occurrence);
-            }
-        }
-
-        System.out.println("HIGHEST OCCURRENCE: " + highestOccurrence);
-        System.out.println(uniqueMoves.get(highestOccIndex));
-
 
         IO results = new IO(board, uniqueMoves);
+        board.removePlayers(this.simGames);
+        //Linker.clearSims();
 
         return results.getHighestOccurrence();
     }
 
-    synchronized private SimulationResults simulation(Host board) {
+    private SimulationResults simulation(Host board) {
+
+        isRunning = ThreadLocal.withInitial(() -> true);
+
         AtomicInteger neededMoves;
         String localSeed = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999));
         ArrayList<UI> games = new ArrayList<>();
 
         SimHost simulationHost = new SimHost(localSeed, board);
 
-        //simulationHost.bumpTurn();
         games.add(new UI(localSeed));
         games.get(0).setBot();
         games.get(0).setX();
+
+        simGames.add(games.get(0));
+
         games.add(new UI(localSeed));
         games.get(1).setBot();
         games.get(1).setO();
         //games.get(1).setVisible();
 
+        simGames.add(games.get(1));
+
         simulationHost.addPlayer(games.get(0));
         simulationHost.addPlayer(games.get(1));
+
         long time = System.currentTimeMillis();
 
-        while(games.get(0).isRunning().get()) {
+        // int localSelection = -1;
+        while (games.get(0).isRunning().get()) {
 
             // timer, if simulation takes to long, break
-            if (System.currentTimeMillis() > (time + 4000)) {
+            if (System.currentTimeMillis() > (time + 2000)) {
                 break;
             }
 
         }
 
         neededMoves = games.get(1).getTotalMoves();
-        //System.out.println(neededMoves);
 
         int selection = games.get(1).getBotSelection();
-        System.out.println("From Simulation: " + selection);
+        //System.out.println("From Simulation: " + selection);
 
-        if(games.get(1).doesWin()) {
+        SimulationResults DEFENSIVE_RESULTS;
+        if (games.get(1).doesWin()) {
             selection = games.get(1).getLatestSelection();
-            this.DEFENSIVE_RESULTS = new SimulationResults(selection, neededMoves);
-            this.doDefense.set(true);
-            this.doesWin.set(true);
+            DEFENSIVE_RESULTS = new SimulationResults(selection, neededMoves);
+            //this.doDefense.set(true);
+            //this.doesWin.set(true);
             games.get(1).setVisible(false);
+
+            //Linker.seeHosts();
+
+            isRunning.set(false);
+
+            Linker.removeHost(simulationHost);
+            //simulationHost.removePlayers(games);
             games.clear();
-            return this.DEFENSIVE_RESULTS;
+
+            return DEFENSIVE_RESULTS;
         }
 
-        if(games.get(1).isDefensive() && !doesWin.get()) {
+        if (games.get(1).isDefensive() && !doesWin.get()) {
             selection = games.get(0).getLatestSelection();
-            this.DEFENSIVE_RESULTS = new SimulationResults(selection, neededMoves);
-            this.doDefense.set(true);
-            System.out.println(this.doDefense.get());
+            DEFENSIVE_RESULTS = new SimulationResults(selection, neededMoves);
+            //this.doDefense.set(true);
+            //System.out.println(this.doDefense.get());
             games.get(1).setVisible(false);
-            games.clear();
-            return this.DEFENSIVE_RESULTS;
-        }
-        games.get(1).setVisible(false);
-        games.clear();
 
+
+            //Linker.seeHosts();
+            isRunning.set(false);
+
+            Linker.removeHost(simulationHost);
+            //simulationHost.removePlayers(games);
+            games.clear();
+
+            return DEFENSIVE_RESULTS;
+        }
+
+        games.get(1).setVisible(false);
+
+        //Linker.seeHosts();
+
+        isRunning.set(false);
+
+        Linker.removeHost(simulationHost);
+        //simulationHost.removePlayers(games);
+        games.clear();
 
         return new SimulationResults(selection, neededMoves);
     }
+
 
 }

@@ -1,7 +1,7 @@
 public class Occurrences {
     private final SimulationResults simulationResults;
+    private final int index;
     private int count = 0;
-    private int index;
 
     public Occurrences(SimulationResults simulationResults, int count) {
         this.simulationResults = simulationResults;

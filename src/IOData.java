@@ -1,9 +1,11 @@
 public class IOData {
-    public void setIndex(int index) {
-        this.index = index;
-    }
-
     private int index;
+    private int count;
+
+    public IOData(int index, int count) {
+        this.index = index;
+        this.count = count;
+    }
 
     public int getCount() {
         return count;
@@ -13,15 +15,12 @@ public class IOData {
         this.count = count;
     }
 
-    private int count;
-
-    public IOData(int index, int count) {
-        this.index = index;
-        this.count = count;
-    }
-
     public int getIndex() {
         return index;
+    }
+
+    public void setIndex(int index) {
+        this.index = index;
     }
 
     public String toString() {
