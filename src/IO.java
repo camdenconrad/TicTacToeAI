@@ -33,6 +33,9 @@ public class IO {
 
         // write
         raf.seek(0);
+        for (int i = 0; i < 9; i++) {
+            uniqueMoves.remove(null);
+        }
         uniqueMoves.sort(Comparator.comparingInt(Occurrences::index));
 
         // convert data types

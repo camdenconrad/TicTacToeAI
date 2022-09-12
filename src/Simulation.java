@@ -10,6 +10,8 @@ public class Simulation {
     ArrayList<UI> simGames = new ArrayList<>();
     private ThreadLocal<Boolean> isRunning = ThreadLocal.withInitial(() -> false);
 
+    private final ThreadLocal<Long> simTime = new ThreadLocal<>();
+
     public Simulation() {
 
     }
@@ -23,7 +25,12 @@ public class Simulation {
     }
 
     public int run(Host board) throws IOException {
+        simGames.clear();
 
+        Main.setStartTime();
+        Main.startTime();
+
+        simTime.set(0L);
         simsRun.set(0);
 
         ArrayList<SimulationResults> simulationResults = new ArrayList<>();
@@ -31,14 +38,14 @@ public class Simulation {
         for (int i = 0; i < Main.runs; i++) {
             //System.out.println("Running simulation " + (i + 1));
             threads.add(new Thread(() -> simulationResults.add(simulation(board))));
-            threads.get(threads.size() - 1).start();
+            threads.get(threads.size()-1).start();
 
         }
         while (threads.size() > 0) {
             int localSize = threads.size();
             threads.removeIf(local -> !local.isAlive());
-            if (threads.size() < localSize) {
-                simsRun.addAndGet(localSize - threads.size());
+            if(threads.size() < localSize) {
+                simsRun.addAndGet(localSize-threads.size());
             }
             //System.out.println(threads.size());
         }
@@ -58,18 +65,42 @@ public class Simulation {
                 }
             }
         }
-        for (Integer result : uniques) {
-            //System.out.println(result);
-        }
-        //System.out.println("/////");
 
+        ArrayList<Occurrences> forRotations = new ArrayList<>();
+        for(int i = 0; i < 9; i++) {
+            forRotations.add(null);
+        }
         for (Occurrences occurrence : uniqueMoves) {
-            //System.out.println(occurrence);
+            try {
+                forRotations.set(occurrence.index(), occurrence);
+            } catch (IndexOutOfBoundsException ignored){}
         }
 
-        IO results = new IO(board, uniqueMoves);
+
+
+        IO results = new IO(board, forRotations);
+
+        // rotations
+        forRotations = rotate(forRotations);
+        board.rotateBoard();
+        new IO(board, forRotations);
+
+        forRotations = rotate(forRotations);
+        board.rotateBoard();
+        new IO(board, forRotations);
+
+        forRotations = rotate(forRotations);
+        board.rotateBoard();
+        new IO(board, forRotations);
+
+        //rotate back in place
+        board.rotateBoard();
+
         board.removePlayers(this.simGames);
         //Linker.clearSims();
+
+        simsRun.set(0);
+        Main.stopTime();
 
         return results.getHighestOccurrence();
     }
@@ -106,7 +137,7 @@ public class Simulation {
         while (games.get(0).isRunning().get()) {
 
             // timer, if simulation takes to long, break
-            if (System.currentTimeMillis() > (time + 2000)) {
+            if (System.currentTimeMillis() > (time + 5000)) {
                 break;
             }
 
@@ -141,7 +172,7 @@ public class Simulation {
             DEFENSIVE_RESULTS = new SimulationResults(selection, neededMoves);
             //this.doDefense.set(true);
             //System.out.println(this.doDefense.get());
-            games.get(1).setVisible(false);
+            //games.get(1).setVisible(false);
 
 
             //Linker.seeHosts();
@@ -154,7 +185,7 @@ public class Simulation {
             return DEFENSIVE_RESULTS;
         }
 
-        games.get(1).setVisible(false);
+        //games.get(1).setVisible(false);
 
         //Linker.seeHosts();
 
@@ -165,6 +196,47 @@ public class Simulation {
         games.clear();
 
         return new SimulationResults(selection, neededMoves);
+    }
+
+    public ArrayList<Occurrences> rotate(ArrayList<Occurrences> toRotate) {
+        int length = 0;
+        ArrayList<Occurrences> result = null;
+        try {
+            length = (int) Math.sqrt(toRotate.size());
+            result = new ArrayList<>();
+
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+        }
+        Occurrences[][] rotated = new Occurrences[length][length];
+        int index = (length * length) - 1;
+
+        for(int i = length; i > 0; i--) {
+            for(int j = 0; j < length; j++) {
+                rotated[i-1][j] = toRotate.get(index);
+                try {
+                    rotated[i - 1][j].setCount(toRotate.get(index).getCount());
+                } catch (NullPointerException ignored) {
+                    //rotated[i - 1][j].setCount(0);
+                }
+                index -= 3;
+                if(index < 0) {
+                    index += (length * length)-1;
+                }
+
+            }
+
+        }
+
+        for(int i = 0; i < length; i++) {
+            for (int j = 0; j < length; j++) {
+                assert result != null;
+                result.add(rotated[i][j]);
+            }
+        }
+
+
+        return result;
     }
 
 

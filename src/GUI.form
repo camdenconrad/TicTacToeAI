@@ -43,9 +43,9 @@
                 <border type="none"/>
                 <children>
                   <component id="f66d8" class="javax.swing.JLabel" binding="simsRun">
-                    <constraints border-constraint="North"/>
+                    <constraints border-constraint="Center"/>
                     <properties>
-                      <horizontalAlignment value="0"/>
+                      <horizontalAlignment value="2"/>
                       <horizontalTextPosition value="0"/>
                       <text value="Simulations (0/0)"/>
                     </properties>
@@ -53,6 +53,14 @@
                   <component id="96b27" class="javax.swing.JProgressBar" binding="progressBar">
                     <constraints border-constraint="South"/>
                     <properties/>
+                  </component>
+                  <component id="54d84" class="javax.swing.JLabel" binding="simTime">
+                    <constraints border-constraint="North"/>
+                    <properties>
+                      <horizontalAlignment value="2"/>
+                      <horizontalTextPosition value="0"/>
+                      <text value="Label"/>
+                    </properties>
                   </component>
                 </children>
               </grid>

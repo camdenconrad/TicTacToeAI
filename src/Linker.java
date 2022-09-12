@@ -45,6 +45,7 @@ public class Linker {
                 if (sim instanceof SimHost) {
                     rooms.remove(sim.getSeed());
                     hosts.remove(sim);
+
                 }
             }
         } catch (ConcurrentModificationException ignored) {
@@ -76,5 +77,9 @@ public class Linker {
 
     public static Host getHost(int index) {
         return hosts.get(index);
+    }
+
+    public static ArrayList<String> getRooms() {
+        return rooms;
     }
 }

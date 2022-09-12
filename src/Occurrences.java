@@ -3,6 +3,10 @@ public class Occurrences {
     private final int index;
     private int count = 0;
 
+    public void setCount(int count) {
+        this.count = count;
+    }
+
     public Occurrences(SimulationResults simulationResults, int count) {
         this.simulationResults = simulationResults;
         this.count = count;

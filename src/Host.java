@@ -1,18 +1,30 @@
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import Toolies.Spin;
 
 public class Host {
-
     protected final ArrayList<UI> players = new ArrayList<>();
     private final AtomicBoolean xsTurn = new AtomicBoolean(true);
     private final AtomicBoolean osTurn = new AtomicBoolean(false);
     private final String seed;
     private final ThreadLocal<Boolean> isResetting = ThreadLocal.withInitial(() -> false);
+
+    public AtomicBoolean getIsAnimating() {
+        return isAnimating;
+    }
+
+    private final AtomicBoolean isAnimating = new AtomicBoolean(false);
     ArrayList<Integer> board;
     private int winner = 0;
     private int wins = 0;
     private int ties = 0;
     private int losses = 0;
+
+    public void incMove() {
+        this.totalMoves += 1;
+    }
+
+    private int totalMoves = 0;
 
     @SuppressWarnings("BusyWait")
     public Host(String seed) {
@@ -42,7 +54,11 @@ public class Host {
                 }
                 if (allTurnsTaken) {
                     winner = 0;
-                    resetBoard();
+                    try {
+                        resetBoard();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         });
@@ -106,6 +122,7 @@ public class Host {
     }
 
     public void setPos(int z) {
+        this.incMove();
         if (board.get(z) == 0) {
             if (xsTurn.get()) {
                 xsTurn.set(false);
@@ -169,9 +186,25 @@ public class Host {
         //System.out.println("[" + board.get(6) + "]" + "[" + board.get(7) + "]" + "[" + board.get(8) + "]\n");
     }
 
-    public void resetBoard() {
+    public void resetBoard() throws InterruptedException {
+        totalMoves = 0;
         this.updateScores();
         this.isResetting.set(true);
+
+        //System.err.println("\033[31m Board was reset.\033[0m");
+        for (int i = 0; i < 9; i++) {
+            board.set(i, 0);
+        }
+        this.isResetting.set(false);
+    }
+    public void resetBoard(UI ui) throws InterruptedException {
+        totalMoves = 0;
+        this.updateScores();
+        this.isResetting.set(true);
+
+        if(getWinner() != 0) {
+            this.winAnimation(ui);
+        }
 
         //System.err.println("\033[31m Board was reset.\033[0m");
         for (int i = 0; i < 9; i++) {
@@ -221,5 +254,25 @@ public class Host {
 
     public boolean getIsResetting() {
         return this.isResetting.get();
+    }
+
+    public int getTotalMoves() {
+        return this.totalMoves;
+    }
+
+    public void rotateBoard() {
+        this.board = Spin.rotate(this.board);
+    }
+
+    public void winAnimation(UI ui) throws InterruptedException {
+        if (!(getWinner() == 0)) {
+            isAnimating.set(true);
+            for (int i = 0; i < 9; i++) {
+                ui.repaint();
+                this.board.set(i, getWinner());
+                Thread.sleep(10);
+            }
+            isAnimating.set(false);
+        }
     }
 }

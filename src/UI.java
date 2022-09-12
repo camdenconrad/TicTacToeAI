@@ -1,3 +1,5 @@
+import Toolies.DynamicDisplay;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
@@ -10,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class UI {
 
     private final ArrayList<Status> buttons = new ArrayList<>();
-    private final JPanel frame = new JPanel();
+    private JPanel frame = null;
     private final AtomicInteger totalMoves = new AtomicInteger(0);
     private final Simulation simulation;
     private final AtomicInteger botSelection = new AtomicInteger(-10); // debug initialize
@@ -28,31 +30,37 @@ public class UI {
     private int wins = 0;
     private int ties = 0;
 
+    private UI self = this;
+
     public UI(String seed) {
 
         simulation = new Simulation();
 
         linkTo(seed);
+        if(!isBot) {
+            frame = new JPanel();
+            frame.setLayout(new GridLayout(3, 3));
+            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+            frame.setSize(screenSize.height - 100, screenSize.height - 100);
+        }
 
-        frame.setLayout(new GridLayout(3, 3));
-
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        frame.setSize(screenSize.height - 100, screenSize.height - 100);
         //frame.setResizable(false);
 
-        for (int i = 0; i < 9; i++) {
-            buttons.add(new Status(i));
-        }
+        if(!isBot) {
+            for (int i = 0; i < 9; i++) {
+                buttons.add(new Status(i));
+            }
 
-        for (Status buttons : buttons) {
-            frame.add(buttons);
-            buttons.setBackground(new Color(255, 255, 255));
-            //buttons.setBorderPainted(false);
-            //buttons.setText(String.valueOf(j));
-        }
+            for (Status buttons : buttons) {
+                frame.add(buttons);
+                buttons.setBackground(new Color(255, 255, 255));
+                //buttons.setBorderPainted(false);
+                //buttons.setText(String.valueOf(j));
+            }
 
-        for (Status buttons : buttons) {
-            Listener(buttons);
+            for (Status buttons : buttons) {
+                Listener(buttons);
+            }
         }
 
         updateUI();
@@ -140,17 +148,11 @@ public class UI {
                 } catch (InterruptedException ignored) {
                 }
 
-                for (Status button : buttons) {
-                    if (host.check(button.getPosition()) == 1) {
-                        button.setBackground(new Color(189, 147, 226));
-                    }
-                    if (host.check(button.getPosition()) == 2) {
-                        button.setBackground(new Color(227, 147, 74));
-                    }
-                    if (host.check(button.getPosition()) == 0) {
-                        button.setBackground(new Color(255, 255, 255));
-                    }
-
+                if(!isBot) {
+                    repaint();
+                }
+                while(true) {
+                    if (!host.getIsAnimating().get()) break;
                 }
                 while (true) {
                     if (!host.getIsResetting()) break;
@@ -171,6 +173,8 @@ public class UI {
                             this.isRunning.set(false);
 
                             //frame.dispose();
+                            self = null;
+
                             break;
                         }
                     } else if (host.getWinner() <= 3) {
@@ -188,6 +192,7 @@ public class UI {
                                 this.isRunning.set(false);
 
                                 //frame.dispose();
+                                self = null;
                                 break;
                             }
                         } catch (NullPointerException ignored) {
@@ -200,17 +205,32 @@ public class UI {
                         this.incrementTies();
                         totalMoves.set(0);
                     }
+                    try {
+                        while(true) {
+                            if (!host.getIsAnimating().get()) break;
+                        }
+                        if(this.isBot) {
+                            updateUI.interrupt();
+                            self = null;
+                        }
+                        host.resetBoard(this);
 
-                    host.resetBoard();
+                    } catch (InterruptedException ignored) {
+                    }
+
                     //System.gc();
 
-                    for (Status status : buttons) {
-                        status.setEnabled(true);
+                    if (!isBot) {
+                        for (Status status : buttons) {
+                            status.setEnabled(true);
+                        }
                     }
                 }
 
-                for (Status status : buttons) {
-                    status.setEnabled(isTurn.get());
+                if (!isBot) {
+                    for (Status status : buttons) {
+                        status.setEnabled(isTurn.get());
+                    }
                 }
 
                 if (isTurn.get() && isBot) {
@@ -218,10 +238,15 @@ public class UI {
                 }
 
                 if (isTurn.get() && isSmartBot) {
-                    try {
-                        chooseSimulatedButton();
-                    } catch (InterruptedException | IOException e) {
-                        throw new RuntimeException(e);
+                    if(host.getTotalMoves() == 0) { //  && this.getOpponent().totalMoves.get() != 0
+                        chooseRandomButton();
+                    }
+                    else {
+                        try {
+                            chooseSimulatedButton();
+                        } catch (InterruptedException | IOException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
                 }
 
@@ -234,6 +259,21 @@ public class UI {
             //System.out.println(this.getLatestSelection());
         });
         updateUI.start();
+    }
+
+    public void repaint() {
+        for (Status button : buttons) {
+            if (host.check(button.getPosition()) == 1) {
+                button.setBackground(new Color(189, 147, 226));
+            }
+            if (host.check(button.getPosition()) == 2) {
+                button.setBackground(new Color(227, 147, 74));
+            }
+            if (host.check(button.getPosition()) == 0) {
+                button.setBackground(new Color(255, 255, 255));
+            }
+
+        }
     }
 
     public int getLatestSelection() {
@@ -249,6 +289,7 @@ public class UI {
         } else chooseRandomButton();
         //System.out.println(botSelection);
         //new IO(host);
+        frame.updateUI();
     }
 
     private void chooseRandomButton() {
@@ -290,10 +331,6 @@ public class UI {
         });
     }
 
-    public void setTitle(String tic_tac_toe) {
-        //frame.setTitle(tic_tac_toe);
-    }
-
     public void setVisible(boolean b) {
         this.frame.setVisible(b);
     }
@@ -308,5 +345,14 @@ public class UI {
 
     public int getTies() {
         return this.ties;
+    }
+
+    public void setPlayer() {
+        isBot = false;
+        isSmartBot = false;
+    }
+
+    public UI getSelf() {
+        return self;
     }
 }
